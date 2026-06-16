@@ -33,6 +33,96 @@ app.get('/', (req, res) => {
   res.json({ name: 'Fresh Browser Proxy API', usage: 'GET /fetch?url=https://example.com' });
 });
 
+app.get('/test', (req, res) => {
+  res.setHeader('Content-Type', 'text/html');
+  res.send(`<!DOCTYPE html>
+<html>
+<head><title>Fresh Browser Proxy Tester</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:sans-serif;max-width:860px;margin:40px auto;padding:0 24px;color:#222}
+h2{font-size:20px;margin-bottom:20px}
+input{width:100%;padding:10px 12px;font-size:14px;border:1px solid #ddd;border-radius:6px}
+button{padding:10px 24px;margin-top:10px;font-size:14px;background:#000;color:#fff;border:none;border-radius:6px;cursor:pointer}
+button:disabled{opacity:0.5}
+#status{font-size:13px;color:#666;margin:10px 0}
+#meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:14px 0}
+.card{background:#f7f7f7;border:1px solid #eee;border-radius:6px;padding:10px 14px}
+.label{font-size:11px;color:#999;margin-bottom:3px}
+.val{font-size:13px;font-weight:600;word-break:break-all}
+#out{display:none;background:#f5f5f5;border:1px solid #eee;border-radius:6px;padding:16px;font-size:12px;font-family:monospace;white-space:pre-wrap;word-break:break-word;max-height:420px;overflow-y:auto;line-height:1.6}
+#err{display:none;background:#fff0f0;border:1px solid #fcc;border-radius:6px;padding:14px;color:#c00;font-size:13px}
+.copy-btn{float:right;font-size:12px;padding:4px 10px;background:#fff;color:#333;border:1px solid #ddd;border-radius:4px;cursor:pointer;margin-bottom:6px}
+</style>
+</head>
+<body>
+<h2>Fresh Browser Proxy Tester</h2>
+<input id="u" value="https://marlin-viola-ac3z.squarespace.com/" placeholder="Enter any URL..." />
+<button id="btn" onclick="go()">Fetch</button>
+<p id="status"></p>
+<div id="meta"></div>
+<div id="err"></div>
+<div id="outWrap" style="display:none">
+  <button class="copy-btn" onclick="copyIt()">Copy content</button>
+  <pre id="out"></pre>
+</div>
+<script>
+async function go() {
+  const url = document.getElementById('u').value.trim();
+  if (!url) return;
+  const btn = document.getElementById('btn');
+  const status = document.getElementById('status');
+  const meta = document.getElementById('meta');
+  const out = document.getElementById('out');
+  const outWrap = document.getElementById('outWrap');
+  const err = document.getElementById('err');
+
+  btn.disabled = true;
+  btn.textContent = 'Fetching...';
+  status.textContent = 'Calling fresh browser proxy...';
+  meta.innerHTML = '';
+  out.textContent = '';
+  outWrap.style.display = 'none';
+  err.style.display = 'none';
+
+  const t = Date.now();
+  try {
+    const r = await fetch('/fetch?url=' + encodeURIComponent(url));
+    const d = await r.json();
+    const elapsed = ((Date.now() - t) / 1000).toFixed(1);
+    if (d.error) {
+      err.style.display = 'block';
+      err.textContent = 'Error: ' + d.error;
+      status.textContent = 'Failed after ' + elapsed + 's';
+    } else {
+      status.textContent = 'Done in ' + elapsed + 's — fresh real-browser fetch, zero cache';
+      meta.innerHTML = [
+        ['Title', d.title || '—'],
+        ['Status', d.statusCode],
+        ['Time', elapsed + 's'],
+        ['Fetched at', new Date(d.fetchedAt).toLocaleTimeString()],
+        ['Final URL', d.finalUrl]
+      ].map(([l,v]) => '<div class="card"><div class="label">'+l+'</div><div class="val">'+v+'</div></div>').join('');
+      out.textContent = d.content;
+      outWrap.style.display = 'block';
+    }
+  } catch(e) {
+    err.style.display = 'block';
+    err.textContent = 'Network error: ' + e.message;
+    status.textContent = 'Error after ' + ((Date.now() - t) / 1000).toFixed(1) + 's';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Fetch';
+}
+
+function copyIt() {
+  navigator.clipboard.writeText(document.getElementById('out').textContent);
+}
+</script>
+</body>
+</html>`);
+});
+
 app.get('/fetch', async (req, res) => {
   const { url } = req.query;
   if (!url) return res.status(400).json({ error: 'Missing url parameter' });
